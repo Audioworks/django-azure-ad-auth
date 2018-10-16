@@ -1,0 +1,15 @@
+LICENSE
+MANIFEST.in
+README.md
+requirements.txt
+tox.ini
+azure_ad_auth/__init__.py
+azure_ad_auth/backends.py
+azure_ad_auth/urls.py
+azure_ad_auth/utils.py
+azure_ad_auth/views.py
+django_azure_ad_auth.egg-info/PKG-INFO
+django_azure_ad_auth.egg-info/SOURCES.txt
+django_azure_ad_auth.egg-info/dependency_links.txt
+django_azure_ad_auth.egg-info/requires.txt
+django_azure_ad_auth.egg-info/top_level.txt

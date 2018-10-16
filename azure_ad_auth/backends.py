@@ -1,4 +1,5 @@
-from .utils import get_token_payload, get_token_payload_email, get_login_url, get_logout_url, RESPONSE_MODE
+import logging
+from .utils import get_token_payload, get_token_payload_email, get_login_url, get_logout_url, get_token_payload_with_jwk, get_first_email_from_payload, get_payload_field, RESPONSE_MODE
 from base64 import urlsafe_b64encode
 from django.conf import settings
 from django.contrib.auth.models import Group
@@ -40,9 +41,12 @@ class AzureActiveDirectoryBackend(object):
     def authenticate(self, token=None, nonce=None, **kwargs):
         if token is None:
             return None
+        
+        payload = get_token_payload_with_jwk(token=token, nonce=nonce)
+        email = get_first_email_from_payload(payload)
 
-        payload = get_token_payload(token=token, nonce=nonce)
-        email = get_token_payload_email(payload)
+        logging.info('payload: ' + str(payload))
+        logging.info('email: ' + str(email))
 
         if email is None:
             return None
@@ -51,7 +55,11 @@ class AzureActiveDirectoryBackend(object):
 
         users = self.User.objects.filter(email=email)
         if len(users) == 0:
-            user = self.create_user(new_user, payload)
+            # Get other user details from id_token
+            given_name = get_payload_field(payload, 'given_name')
+            family_name = get_payload_field(payload, 'family_name')
+            
+            user = self.User.objects.create_user(email, given_name, family_name)
 
             # Try mapping group claims to matching groups
             self.add_user_to_group(user, payload)

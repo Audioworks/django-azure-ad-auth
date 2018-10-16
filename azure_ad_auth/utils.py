@@ -1,8 +1,10 @@
+import logging
 from base64 import b64decode
 from cryptography.hazmat.backends import default_backend
 from cryptography.x509 import load_der_x509_certificate
 from django.conf import settings
 import jwt
+from jwt.algorithms import RSAAlgorithm
 from lxml import etree
 import requests
 try:
@@ -71,6 +73,7 @@ def parse_x509_DER_list(federation_metadata_document):
 def get_public_keys():
     try:
         federation_metadata_document_url = get_federation_metadata_document_url()
+        logging.info("Metadata URL: " + federation_metadata_document_url)
         response = requests.get(federation_metadata_document_url)
         if not response.ok:
             raise
@@ -84,18 +87,45 @@ def get_public_keys():
 
 def get_token_payload(token=None, audience=CLIENT_ID, nonce=None):
     for key in get_public_keys():
+        logging.info('Key: ' + str(key))
         try:
-            payload = jwt.decode(token, key=key, audience=audience)
+            logging.info('---Attempting to decode payload---')
+            logging.info('token: ' + str(token))
+            logging.info('audience: ' + str(audience))
+            logging.info('headers: ' + str(jwt.get_unverified_header(token)))
+            payload = jwt.decode(token, key=key, algorithms=['RS256'], audience=audience)
 
             if payload['nonce'] != nonce:
                 continue
 
             return payload
         except (jwt.InvalidTokenError, IndexError) as e:
+            logging.error(str(e))
             pass
 
     return None
 
+def get_token_payload_with_jwk(token=None, audience=CLIENT_ID, nonce=None):
+    for key in get_keys_from_jwk():
+        logging.info('Key: ' + str(key).replace("\'", "\""))
+        try:
+            logging.info('---Attempting to decode payload---')
+            logging.info('token: ' + str(token))
+            logging.info('audience: ' + str(audience))
+            logging.info('headers: ' + str(jwt.get_unverified_header(token)))
+            pem_key = RSAAlgorithm.from_jwk(str(key).replace("\'", "\""))
+            logging.info('pem key: ' + str(pem_key))
+            payload = jwt.decode(token, key=pem_key, algorithms=['RS256'], audience=audience)
+            logging.info(str(payload))
+            #if payload['nonce'] != nonce:
+            #    continue
+
+            return payload
+        except (jwt.InvalidTokenError, IndexError) as e:
+            logging.error(str(e))
+            pass
+
+    return None
 
 def get_token_payload_email(payload, field_name = 'upn'):
     return get_token_payload_field(payload, field_name)
@@ -103,4 +133,19 @@ def get_token_payload_email(payload, field_name = 'upn'):
 
 def get_token_payload_field(payload, field_name, def_value = None):
     return payload[field_name] if payload and field_name in payload else def_value
+    
+def get_first_email_from_payload(payload):
+    return payload['emails'][0]
+    
+def get_payload_field(payload, field_name):
+    return payload[field_name]    
+
+def get_open_id_config():
+    return 'https://soundsunite.b2clogin.com/soundsunite.onmicrosoft.com/v2.0/.well-known/openid-configuration?p=B2C_1_SU-SignUpSignIn'
+    
+def get_keys_from_jwk():
+    response = requests.get(get_open_id_config())
+    jwk = requests.get(response.json()['jwks_uri'])
+    logging.info(str(jwk.json()))
+    return jwk.json()['keys']
 

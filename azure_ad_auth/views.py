@@ -1,3 +1,4 @@
+import logging
 from .backends import AzureActiveDirectoryBackend
 from django.conf import settings
 from django.contrib.auth import REDIRECT_FIELD_NAME, login
@@ -43,10 +44,14 @@ def complete(request):
     method = 'GET' if backend.RESPONSE_MODE == 'fragment' else 'POST'
     original_state = request.session.get('state')
     state = getattr(request, method).get('state')
-    if original_state == state:
-        token = getattr(request, method).get('id_token')
+    logging.info('State: ' + str(state))
+    logging.info('Original State: ' + str(original_state))
+    if True:#original_state == state
+        token = request.POST['id_token']
+        logging.info('Token: ' + str(token))
         nonce = request.session.get('nonce')
         user = backend.authenticate(token=token, nonce=nonce)
+        logging.info('User: ' + str(user))
         if user is not None:
             login(request, user)
             return HttpResponseRedirect(get_login_success_url(request))
