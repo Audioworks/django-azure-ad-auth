@@ -46,7 +46,7 @@ def complete(request):
     state = getattr(request, method).get('state')
     logging.info('State: ' + str(state))
     logging.info('Original State: ' + str(original_state))
-    if True:#original_state == state
+    if original_state == state:
         token = request.POST['id_token']
         logging.info('Token: ' + str(token))
         nonce = request.session.get('nonce')

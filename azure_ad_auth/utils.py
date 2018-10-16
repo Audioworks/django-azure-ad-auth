@@ -15,7 +15,7 @@ except ImportError:
     from urllib import urlencode
 
 
-AUTHORITY = getattr(settings, 'AAD_AUTHORITY', 'https://login.microsoftonline.com')
+AUTHORITY = getattr(settings, 'AAD_AUTHORITY', 'https://soundsunite.b2clogin.com')
 SCOPE = getattr(settings, 'AAD_SCOPE', 'openid')
 RESPONSE_TYPE = getattr(settings, 'AAD_RESPONSE_TYPE', 'id_token')
 RESPONSE_MODE = getattr(settings, 'AAD_RESPONSE_MODE', 'form_post')
@@ -40,8 +40,9 @@ def get_login_url(authority=AUTHORITY, response_type=RESPONSE_TYPE, response_mod
         param_dict['state'] = state
     if always_authenticate:
         param_dict['prompt'] = 'login'
+    param_dict['p'] = 'B2C_1_SU-SignUpSignIn'
     params = urlencode(param_dict)
-    return '{authority}/common/oauth2/authorize?{params}'.format(
+    return '{authority}/soundsunite.onmicrosoft.com/oauth2/v2.0/authorize?{params}'.format(
         authority=authority,
         params=params,
     )
@@ -117,8 +118,8 @@ def get_token_payload_with_jwk(token=None, audience=CLIENT_ID, nonce=None):
             logging.info('pem key: ' + str(pem_key))
             payload = jwt.decode(token, key=pem_key, algorithms=['RS256'], audience=audience)
             logging.info(str(payload))
-            #if payload['nonce'] != nonce:
-            #    continue
+            if payload['nonce'] != nonce:
+                continue
 
             return payload
         except (jwt.InvalidTokenError, IndexError) as e:
